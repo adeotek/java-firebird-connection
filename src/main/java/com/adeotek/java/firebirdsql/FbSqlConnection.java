@@ -1,4 +1,4 @@
-package com.adeotek.firebirdsql;
+package com.adeotek.java.firebirdsql;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -14,7 +14,7 @@ public class FbSqlConnection {
     protected static final String FB_CONN_STR_PREFIX = "jdbc:firebirdsql:";
     protected static final HashMap<String, String> FB_CONN_PARAMETERS = GetDefaultConnectionParameters();
     protected static HashMap<String, String> GetDefaultConnectionParameters() {
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, String> params = new HashMap<>();
         params.put("sqlDialect", "3");
         params.put("charSet", "UTF-8");
 //        params.put("encoding", "UTF8");
@@ -37,7 +37,7 @@ public class FbSqlConnection {
     public String connectionType = null;
     public int timeout = 3;
 
-    public FbSqlConnection(String database, String hostname, int port, String username, String password, String driverName) throws FbSqlException {
+    public FbSqlConnection(String database, String hostname, int port, String username, String password, String driverName) {
         _database = database;
         if (!isStringEmptyOrNull(hostname)) {
             _hostname = hostname;
@@ -56,11 +56,11 @@ public class FbSqlConnection {
         }
     }//FBConnection
 
-    public FbSqlConnection(String database, String hostname, String username, String password) throws FbSqlException {
+    public FbSqlConnection(String database, String hostname, String username, String password) {
         this(database, hostname, 0, username, password, null);
     }//FBConnection
 
-    public FbSqlConnection(String connectionString, String username, String password) throws FbSqlException {
+    public FbSqlConnection(String connectionString, String username, String password) {
         _connectionString = connectionString;
         if (!isStringEmptyOrNull(username)) {
             _username = username;
@@ -242,9 +242,7 @@ public class FbSqlConnection {
                     statement.close();
                     statement = null;
                 }
-            } catch (SQLException se) {
-                statement = null;
-            } catch (NullPointerException npe) {
+            } catch (NullPointerException | SQLException se) {
                 statement = null;
             }
         }
@@ -325,9 +323,7 @@ public class FbSqlConnection {
                     results.close();
                     results = null;
                 }
-            } catch (SQLException se) {
-                results = null;
-            } catch (NullPointerException npe) {
+            } catch (NullPointerException | SQLException se) {
                 results = null;
             }
             try {
@@ -335,9 +331,7 @@ public class FbSqlConnection {
                     statement.close();
                     statement = null;
                 }
-            } catch (SQLException se) {
-                statement = null;
-            } catch (NullPointerException npe) {
+            } catch (NullPointerException | SQLException se) {
                 statement = null;
             }
         }
@@ -392,15 +386,15 @@ public class FbSqlConnection {
                         statement.setNull(i, Types.NULL);
                     } else {
                         if (kv.getValue().getClass().getSimpleName().equals("Integer")) {
-                            statement.setInt(i, ((Integer) kv.getValue()).intValue());
+                            statement.setInt(i, (Integer) kv.getValue());
                         } else if (kv.getValue().getClass().getSimpleName().equals("Long")) {
-                            statement.setLong(i, ((Long) kv.getValue()).longValue());
+                            statement.setLong(i, (Long) kv.getValue());
                         } else if (kv.getValue().getClass().getSimpleName().equals("Short")) {
-                            statement.setLong(i, ((Short) kv.getValue()).shortValue());
+                            statement.setLong(i, (Short) kv.getValue());
                         } else if (kv.getValue().getClass().getSimpleName().equals("Boolean")) {
-                            statement.setBoolean(i, ((Boolean) kv.getValue()).booleanValue());
+                            statement.setBoolean(i, (Boolean) kv.getValue());
                         } else if (kv.getValue().getClass().getSimpleName().equals("Double")) {
-                            statement.setDouble(i, ((Double) kv.getValue()).doubleValue());
+                            statement.setDouble(i, (Double) kv.getValue());
                         } else if (kv.getValue().getClass().getName().equals("java.util.Date")) {
                             statement.setTimestamp(i, new Timestamp(((java.util.Date) kv.getValue()).getTime()));
                         } else if (kv.getValue().getClass().getName().equals("java.sql.Date")) {
@@ -425,9 +419,7 @@ public class FbSqlConnection {
                     statement.close();
                     statement = null;
                 }
-            } catch (SQLException se) {
-                statement = null;
-            } catch (NullPointerException npe) {
+            } catch (NullPointerException | SQLException se) {
                 statement = null;
             }
         }
@@ -464,9 +456,7 @@ public class FbSqlConnection {
                     results.close();
                     results = null;
                 }
-            } catch (SQLException se) {
-                results = null;
-            } catch (NullPointerException npe) {
+            } catch (NullPointerException | SQLException se) {
                 results = null;
             }
             try {
@@ -474,9 +464,7 @@ public class FbSqlConnection {
                     statement.close();
                     statement = null;
                 }
-            } catch (SQLException se) {
-                statement = null;
-            } catch (NullPointerException npe) {
+            } catch (NullPointerException | SQLException se) {
                 statement = null;
             }
         }
@@ -512,5 +500,5 @@ public class FbSqlConnection {
     public static boolean isStringEmptyOrNull(String input) {
         return isStringEmptyOrNull(input, true);
     }//isStringEmptyOrNull
-    /** END Static generic helpers */
+    /* END Static generic helpers */
 }//FbSqlConnection

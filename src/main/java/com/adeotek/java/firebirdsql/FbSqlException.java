@@ -1,4 +1,4 @@
-package com.adeotek.firebirdsql;
+package com.adeotek.java.firebirdsql;
 
 import java.sql.SQLException;
 

@@ -4,9 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.adeotek.firebirdsql</groupId>
+    <groupId>com.adeotek.java.firebirdsql</groupId>
     <artifactId>firebird-connection</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+
     <packaging>jar</packaging>
 
     <name>FirebirdSQL Connection Wrapper</name>
@@ -54,11 +55,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.0.2</version>
-                <configuration>
-                    <archive>
-                        <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
-                    </archive>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
