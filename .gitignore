@@ -24,7 +24,7 @@
 *.rar
 
 # Maven build files
-*.MF
+/target/classes/*
 *.properties
 *.lst
 
