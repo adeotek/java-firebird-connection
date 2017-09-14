@@ -27,8 +27,7 @@ hs_err_pid*
 .project
 
 # Build directory
-/target
+target/*
 
 # Except build jar
-!firebird-connection-*.jar
-!/target/firebird-connection-*.jar
+!target/firebird-connection-*.jar
