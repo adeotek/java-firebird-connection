@@ -2,18 +2,17 @@ package com.adeotek.java.firebirdsql;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class FbSqlConnection {
+    protected static final Logger appLogger = LogManager.getLogger(FbSqlConnection.class);
     protected static final String FB_CONN_STR_PREFIX = "jdbc:firebirdsql:";
     protected static final HashMap<String, String> FB_CONN_PARAMETERS = GetDefaultConnectionParameters();
     protected static HashMap<String, String> GetDefaultConnectionParameters() {
@@ -34,7 +33,6 @@ public class FbSqlConnection {
     protected String _connectionString = null;
     protected Driver _driver = null;
     protected Connection _connection = null;
-    protected Logger appLogger;
 
     // Values: "tcp"/null (default); "local"; "native"; "embedded"
     public String connectionType = null;
@@ -72,26 +70,6 @@ public class FbSqlConnection {
             _password = password;
         }
     }//FBConnection
-
-    public boolean SetLogger(Logger logger, Formatter formatter) {
-        try {
-            if (logger!=null) {
-                appLogger = logger;
-            } else {
-                appLogger = Logger.getLogger(FbSqlConnection.class.getName());
-                logger.setLevel(Level.WARNING);
-                if (formatter!=null) {
-                    logger.setUseParentHandlers(false);
-                    ConsoleHandler handler = new ConsoleHandler();
-                    handler.setFormatter(formatter);
-                    logger.addHandler(handler);
-                }
-            }
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }//SetLogger
 
     protected String prepareConnectionString() {
         if (!isStringEmptyOrNull(_connectionString)) {
