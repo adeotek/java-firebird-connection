@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class FbSqlConnection {
@@ -69,6 +72,26 @@ public class FbSqlConnection {
             _password = password;
         }
     }//FBConnection
+
+    public boolean SetLogger(Logger logger, Formatter formatter) {
+        try {
+            if (logger!=null) {
+                appLogger = logger;
+            } else {
+                appLogger = Logger.getLogger(FbSqlConnection.class.getName());
+                logger.setLevel(Level.WARNING);
+                if (formatter!=null) {
+                    logger.setUseParentHandlers(false);
+                    ConsoleHandler handler = new ConsoleHandler();
+                    handler.setFormatter(formatter);
+                    logger.addHandler(handler);
+                }
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
+    }//SetLogger
 
     protected String prepareConnectionString() {
         if (!isStringEmptyOrNull(_connectionString)) {
