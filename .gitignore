@@ -29,7 +29,8 @@
 *.lst
 
 # Except build jar
-!firebird-connection-*.jar
+!/target/firebird-connection-*.jar
+!/target/libs/*.jar
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
