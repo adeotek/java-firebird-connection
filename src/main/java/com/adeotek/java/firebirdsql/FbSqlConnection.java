@@ -7,7 +7,6 @@ import org.apache.logging.log4j.Logger;
 import org.firebirdsql.jdbc.FirebirdCallableStatement;
 
 import java.sql.*;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -15,13 +14,16 @@ import java.util.Properties;
 public class FbSqlConnection {
     protected static final Logger appLogger = LogManager.getLogger(FbSqlConnection.class);
     protected static final String FB_CONN_STR_PREFIX = "jdbc:firebirdsql:";
-    protected static final HashMap<String, String> FB_CONN_PARAMETERS = GetDefaultConnectionParameters();
-    protected static HashMap<String, String> GetDefaultConnectionParameters() {
-        HashMap<String, String> params = new HashMap<>();
+    protected static final Properties FB_CONN_PARAMETERS = GetDefaultConnectionParameters();
+    protected static Properties GetDefaultConnectionParameters() {
+        Properties params = new Properties();
         params.put("sqlDialect", "3");
         params.put("charSet", "UTF-8");
 //        params.put("encoding", "UTF8");
         params.put("defaultIsolation", "TRANSACTION_READ_COMMITTED");
+        params.put("defaultTransactionIsolation", Connection.TRANSACTION_READ_COMMITTED);
+        params.put("connectTimeout", 30);
+        params.put("soTimeout", 10);
         return params;
     }//CreateDefaultConnectionParameters
 
@@ -89,14 +91,14 @@ public class FbSqlConnection {
         connStr.append("/").append(_database);
         if (FB_CONN_PARAMETERS!=null && FB_CONN_PARAMETERS.size()>0) {
             boolean first = true;
-            for (Map.Entry<String, String> kv : FB_CONN_PARAMETERS.entrySet()) {
+            for (Map.Entry<Object, Object> kv : FB_CONN_PARAMETERS.entrySet()) {
                 if(first) {
                     first = false;
                     connStr.append("?");
                 } else {
                     connStr.append("&");
                 }
-                connStr.append(kv.getKey()).append("=").append(kv.getValue());
+                connStr.append(kv.getKey().toString()).append("=").append(kv.getValue().toString());
             }
         }
         return connStr.toString();
@@ -122,19 +124,19 @@ public class FbSqlConnection {
         }
     }//loadDriver
 
-    public void open(boolean disableAutoCommit, HashMap<String, String> properties) throws FbSqlException {
+    public void open(boolean disableAutoCommit, Properties properties) throws FbSqlException {
         loadDriver(_driverName);
         try {
             Properties connectionProperties = new Properties();
             connectionProperties.put("user", _username);
             connectionProperties.put("password", _password);
             if (FB_CONN_PARAMETERS!=null && FB_CONN_PARAMETERS.size()>0) {
-                for (Map.Entry<String, String> kv : FB_CONN_PARAMETERS.entrySet()) {
+                for (Map.Entry<Object, Object> kv : FB_CONN_PARAMETERS.entrySet()) {
                     connectionProperties.put(kv.getKey(), kv.getValue());
                 }
             }
             if (properties!=null && properties.size()>0) {
-                for (Map.Entry<String, String> kv : properties.entrySet()) {
+                for (Map.Entry<Object, Object> kv : properties.entrySet()) {
                     if (connectionProperties.containsKey(kv.getKey())) {
                         connectionProperties.remove(kv.getKey());
                     }
@@ -443,7 +445,7 @@ public class FbSqlConnection {
         return result;
     }//executeQuery
 
-    public JsonArray executeSelectProcedure(String procedure, LinkedHashMap<String, Object> parameters) throws FbSqlException {
+    public JsonArray executeSelectableProcedure(String procedure, LinkedHashMap<String, Object> parameters) throws FbSqlException {
         if (isStringEmptyOrNull(procedure)) {
             throw new FbSqlException("Invalid stored procedure name");
         }
@@ -451,6 +453,7 @@ public class FbSqlConnection {
         int parametersCount = parameters!=null ? parameters.size() : 0;
         FbSqlException e = null;
         CallableStatement statement = null;
+        ResultSet results = null;
         try {
             String callStr = prepareProcedureCallQuery(procedure, parametersCount);
             appLogger.info("executeProcedure [" + procedure + "] query: " + callStr);
@@ -459,30 +462,32 @@ public class FbSqlConnection {
             }
             statement = _connection.prepareCall(callStr);
             statement.setQueryTimeout(timeout);
-            if (parametersCount>0) {
-                statement = prepareProcedureParams(statement, parameters);
-            }
 
             FirebirdCallableStatement fbStatement = (FirebirdCallableStatement) statement;
             fbStatement.setSelectableProcedure(true);
 
-            boolean hasResults = statement.execute();
+            if (parametersCount>0) {
+                statement = prepareProcedureParams(statement, parameters);
+            }
+
+            fbStatement = (FirebirdCallableStatement) statement;
+            appLogger.debug("isSelectableProcedure: " + fbStatement.isSelectableProcedure());
+
+//            boolean hasResults = statement.execute();
+            results = statement.executeQuery();
             checkDbWarnings();
-
-
-
-//            result = processResultSet(results);
+            result = processResultSet(results);
         } catch (SQLException se) {
             e = new FbSqlException(se);
         } finally {
-//            try {
-//                if (results!=null) {
-//                    results.close();
-//                    results = null;
-//                }
-//            } catch (NullPointerException | SQLException se) {
-//                results = null;
-//            }
+            try {
+                if (results!=null) {
+                    results.close();
+                    results = null;
+                }
+            } catch (NullPointerException | SQLException se) {
+                results = null;
+            }
             try {
                 if (statement != null) {
                     statement.close();
@@ -496,7 +501,7 @@ public class FbSqlConnection {
             throw e;
         }
         return result;
-    }//executeSelectProcedure
+    }//executeSelectableProcedure
 
     public boolean hasTransactionsSupport() throws FbSqlException {
         if (_connection==null) {

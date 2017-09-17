@@ -1,5 +1,7 @@
 package com.adeotek.java.firebirdsql;
 
+import org.firebirdsql.jdbc.FBSQLException;
+
 import java.sql.SQLException;
 
 public class FbSqlException extends Throwable {
@@ -57,7 +59,27 @@ public class FbSqlException extends Throwable {
             sb.append("#").append(ex.getErrorCode()).append("# ");
             sb.append(ex.getMessage());
             sb.append(" (SQL State: ").append(ex.getSQLState()).append(")");
-            ex = ex.getNextException ();
+            ex = ex.getNextException();
+        }
+        if (first) {
+            return null;
+        }
+        return sb.toString();
+    }//processMessage
+
+    protected String processMessage(FBSQLException ex) {
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        while (ex != null) {
+            if(first) {
+                first = false;
+            } else {
+                sb.append("\n");
+            }
+            sb.append("#").append(ex.getErrorCode()).append("# ");
+            sb.append(ex.getMessage());
+            sb.append(" (SQL State: ").append(ex.getSQLState()).append(")");
+            ex = (FBSQLException) ex.getNextException();
         }
         if (first) {
             return null;
