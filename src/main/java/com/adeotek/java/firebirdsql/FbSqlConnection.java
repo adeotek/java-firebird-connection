@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.firebirdsql.jdbc.FirebirdCallableStatement;
 
 import java.sql.*;
 import java.util.HashMap;
@@ -147,6 +148,7 @@ public class FbSqlConnection {
                 _connection.setAutoCommit(false);
                 System.out.println("Auto-commit is disabled.");
             }
+            checkDbWarnings();
         } catch (SQLException se) {
             throw new FbSqlException(se);
         }
@@ -235,6 +237,7 @@ public class FbSqlConnection {
             statement = _connection.createStatement();
             statement.setQueryTimeout(timeout);
             result = statement.executeUpdate(query);
+            checkDbWarnings();
         } catch (SQLException se) {
             e = new FbSqlException(se);
         } finally {
@@ -316,6 +319,7 @@ public class FbSqlConnection {
             statement.setQueryTimeout(timeout);
             results = statement.executeQuery(query);
             result = processResultSet(results);
+            checkDbWarnings();
         } catch (SQLException se) {
             e = new FbSqlException(se);
         } finally {
@@ -363,6 +367,40 @@ public class FbSqlConnection {
         return qry.toString();
     }//prepareProcedureCallQuery
 
+    protected CallableStatement prepareProcedureParams(CallableStatement statement,LinkedHashMap<String, Object> parameters) throws SQLException, FbSqlException {
+        if (parameters==null || parameters.size()==0) {
+            return statement;
+        }
+        int i = 0;
+        for (Map.Entry<String, Object> kv : parameters.entrySet()) {
+            i++;
+            if (kv.getValue() == null) {
+                statement.setNull(i, Types.NULL);
+            } else {
+                if (kv.getValue().getClass().getSimpleName().equals("Integer")) {
+                    statement.setInt(i, (Integer) kv.getValue());
+                } else if (kv.getValue().getClass().getSimpleName().equals("Long")) {
+                    statement.setLong(i, (Long) kv.getValue());
+                } else if (kv.getValue().getClass().getSimpleName().equals("Short")) {
+                    statement.setLong(i, (Short) kv.getValue());
+                } else if (kv.getValue().getClass().getSimpleName().equals("Boolean")) {
+                    statement.setBoolean(i, (Boolean) kv.getValue());
+                } else if (kv.getValue().getClass().getSimpleName().equals("Double")) {
+                    statement.setDouble(i, (Double) kv.getValue());
+                } else if (kv.getValue().getClass().getName().equals("java.util.Date")) {
+                    statement.setTimestamp(i, new Timestamp(((java.util.Date) kv.getValue()).getTime()));
+                } else if (kv.getValue().getClass().getName().equals("java.sql.Date")) {
+                    statement.setTimestamp(i, new Timestamp(((java.sql.Date) kv.getValue()).getTime()));
+                } else if (kv.getValue().getClass().getSimpleName().equals("String")) {
+                    statement.setString(i, kv.getValue().toString());
+                } else {
+                    throw new FbSqlException("Invalid parameter type: [" + kv.getKey() + "] of type: " + kv.getValue().getClass().getSimpleName());
+                }
+            }
+        }
+        return statement;
+    }//prepareProcedureParams
+
     public boolean executeProcedure(String procedure, LinkedHashMap<String, Object> parameters) throws FbSqlException {
         if (isStringEmptyOrNull(procedure)) {
             throw new FbSqlException("Invalid stored procedure name");
@@ -379,36 +417,11 @@ public class FbSqlConnection {
             }
             statement = _connection.prepareCall(callStr);
             statement.setQueryTimeout(timeout);
-            if (parametersCount > 0) {
-                int i = 0;
-                for (Map.Entry<String, Object> kv : parameters.entrySet()) {
-                    i++;
-                    if (kv.getValue() == null) {
-                        statement.setNull(i, Types.NULL);
-                    } else {
-                        if (kv.getValue().getClass().getSimpleName().equals("Integer")) {
-                            statement.setInt(i, (Integer) kv.getValue());
-                        } else if (kv.getValue().getClass().getSimpleName().equals("Long")) {
-                            statement.setLong(i, (Long) kv.getValue());
-                        } else if (kv.getValue().getClass().getSimpleName().equals("Short")) {
-                            statement.setLong(i, (Short) kv.getValue());
-                        } else if (kv.getValue().getClass().getSimpleName().equals("Boolean")) {
-                            statement.setBoolean(i, (Boolean) kv.getValue());
-                        } else if (kv.getValue().getClass().getSimpleName().equals("Double")) {
-                            statement.setDouble(i, (Double) kv.getValue());
-                        } else if (kv.getValue().getClass().getName().equals("java.util.Date")) {
-                            statement.setTimestamp(i, new Timestamp(((java.util.Date) kv.getValue()).getTime()));
-                        } else if (kv.getValue().getClass().getName().equals("java.sql.Date")) {
-                            statement.setTimestamp(i, new Timestamp(((java.sql.Date) kv.getValue()).getTime()));
-                        } else if (kv.getValue().getClass().getSimpleName().equals("String")) {
-                            statement.setString(i, kv.getValue().toString());
-                        } else {
-                            throw new FbSqlException("Invalid parameter type: [" + kv.getKey() + "] of type: " + kv.getValue().getClass().getSimpleName());
-                        }
-                    }
-                }
+            if (parametersCount>0) {
+                statement = prepareProcedureParams(statement, parameters);
             }
             statement.execute();
+            checkDbWarnings();
             result = true;
         } catch (ClassCastException cce) {
             e = new FbSqlException(cce);
@@ -435,16 +448,26 @@ public class FbSqlConnection {
             throw new FbSqlException("Invalid stored procedure name");
         }
         JsonArray result = null;
+        int parametersCount = parameters!=null ? parameters.size() : 0;
         FbSqlException e = null;
-        Statement statement = null;
-        ResultSet results = null;
+        CallableStatement statement = null;
         try {
-            if (_connection==null || _connection.isClosed()) {
+            String callStr = prepareProcedureCallQuery(procedure, parametersCount);
+            appLogger.info("executeProcedure [" + procedure + "] query: " + callStr);
+            if (_connection == null || _connection.isClosed()) {
                 throw new FbSqlException("Invalid database connection");
             }
-            statement = _connection.createStatement();
+            statement = _connection.prepareCall(callStr);
             statement.setQueryTimeout(timeout);
+            if (parametersCount>0) {
+                statement = prepareProcedureParams(statement, parameters);
+            }
 
+            FirebirdCallableStatement fbStatement = (FirebirdCallableStatement) statement;
+            fbStatement.setSelectableProcedure(true);
+
+            boolean hasResults = statement.execute();
+            checkDbWarnings();
 
 
 
@@ -452,14 +475,14 @@ public class FbSqlConnection {
         } catch (SQLException se) {
             e = new FbSqlException(se);
         } finally {
-            try {
-                if (results!=null) {
-                    results.close();
-                    results = null;
-                }
-            } catch (NullPointerException | SQLException se) {
-                results = null;
-            }
+//            try {
+//                if (results!=null) {
+//                    results.close();
+//                    results = null;
+//                }
+//            } catch (NullPointerException | SQLException se) {
+//                results = null;
+//            }
             try {
                 if (statement != null) {
                     statement.close();
@@ -486,6 +509,17 @@ public class FbSqlConnection {
             throw new FbSqlException(se);
         }
     }//hasTransactionsSupport
+
+    protected void checkDbWarnings() throws SQLException {
+        if (_connection==null) {
+            return;
+        }
+        SQLWarning warning = _connection.getWarnings();
+        while (warning != null) {
+            appLogger.warn(warning.getClass().getSimpleName() + ": " + warning.getMessage());
+            warning = warning.getNextWarning();
+        }
+    }//checkDbWarnings
 
     /** Static generic helpers */
     public static boolean isStringEmptyOrNull(String input, boolean trimInput) {
