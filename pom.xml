@@ -6,7 +6,7 @@
 
     <groupId>com.adeotek.java.firebirdsql</groupId>
     <artifactId>firebird-connection</artifactId>
-    <version>1.0.6-SNAPSHOT</version>
+    <version>1.0.6</version>
     <name>FirebirdSQL Connection Wrapper</name>
     <url>http://www.adeotek.com</url>
     <packaging>jar</packaging>
