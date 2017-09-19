@@ -468,7 +468,7 @@ public class FbSqlConnection {
         while (results.next()) {
             JsonObject row = new JsonObject();
             for (int i=1; i<=resultsMetaData.getColumnCount(); i++) {
-                appLogger.debug("Column: [" + resultsMetaData.getColumnName(i)
+                appLogger.trace("Column: [" + resultsMetaData.getColumnName(i)
                                 + "] of type: [" + resultsMetaData.getColumnTypeName(i) + "]");
                 if(resultsMetaData.getColumnTypeName(i).toUpperCase().equals("INTEGER")
                         || resultsMetaData.getColumnTypeName(i).toUpperCase().equals("SMALLINT")) {
